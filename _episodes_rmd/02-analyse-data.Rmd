@@ -15,9 +15,84 @@ keypoints:
 source: Rmd
 ---
 
-
 ```{r setup, include=FALSE}
 source("../bin/chunk-options.R")
+library("dplyr")
+library("tidyr")
+library("ggplot2")
+
+primer_key <- data.frame(row = c("A", "B", "C", "D", "E", "F", "G", "H"),
+                         primers = c(rep("HK", 4), rep("test", 4)))
+
+tidy_data <- read.csv("data/qpcr_data.csv", skip = 27, stringsAsFactors = FALSE) %>% 
+  separate(Well, into = c("row", "column"), sep = 1, convert = TRUE) %>%
+  left_join(primer_key, by = "row")
+
 ```
 
+Now that we've imported our data and confirmed the plate layout by plotting it, let's get to the actual analysis! This dataset has two different RNAi treatments and a control, with three biological replicates for each. Each biological replicate has three technical replicates, as well. 
+
+```{r}
+ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
+  geom_tile(colour = "black") +
+  geom_text() +
+  scale_y_discrete(limits = c("H", "G", "F", "E", "D", "C", "B", "A")) +
+  scale_x_continuous(breaks = 1:12)
+```
+
+We want to know whether the RNAi treatments are effective at knocking down our gene of interest. To do this, we will first calculate the average across technical replicates, then compare the C(t) of our gene of interest to a housekeeping gene, then compare the treated samples with the control.
+
+First let's remove the "NTC" (no template control) and empty wells from the dataset.
+
+```{r}
+tidy_data <- filter(tidy_data, Sample.Name != "NTC", Sample.Name != "")
+```
+
+The technical replicates have the same `Sample.Name`, so we can use the `group_by()` and `summarise()` functions from `dplyr` to calculate the mean C(t) across the technical replicates for each sample.
+
+```{r}
+head(tidy_data$Ct)
+class(tidy_data$Ct)
+```
+
+The Ct column is stored as a character vector, so let's first convert it to numeric format.
+
+> ## Watch out for factors!
+> Factors are stored as character "labels" to underlying numeric levels. 
+> Converting directly to numeric will return the levels, not the actual values 
+> of the labels. If in doubt, use `as.numeric(as.character(my_factor))`. 
+{: .callout}
+
+```{r}
+summarised_data <- tidy_data %>%
+  mutate(Ct = as.numeric(Ct)) %>%
+  group_by(Sample.Name, primers) %>%
+  summarise(mean_Ct = mean(Ct))
+```
+
+
+
+
+
+> ## Challenge
+>
+> The `Sample.Name` column contains information on both which RNAi was used and 
+> the biological replicate. Use the `separate()` function from the `tidyr` 
+> package to separate these into two new columns.
+>
+> > ## Solution
+> >
+> > ~~~
+> > tidy_data <- tidy_data %>%
+> >   separate(Sample.Name, into = c("RNAi", "replicate"), sep = "-")
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+
+```{r}
+tidy_data <- tidy_data %>%
+  separate(Sample.Name, into = c("RNAi", "replicate"), sep ="-")
+```
 

@@ -18,6 +18,9 @@ source: Rmd
 
 ```{r setup, include=FALSE}
 source("../bin/chunk-options.R")
+library("dplyr")
+library("tidyr")
+library("ggplot2")
 ```
 
 We're going to use R to analyse some RT-qPCR data. Download the file `qpcr_data.csv` and put it in your `data` directory. This contains qPCR data as exported from the software on the qPCR machine. First, we'll open this file in Excel or a text editor and take a look at it. Note that different machines / software versions will export data in different formats or with different organisation, so this may look different to the qPCR data that you're used to.
@@ -35,9 +38,15 @@ We can use the `read.csv()` function to read in the data, like we did in the R l
 We can use the `skip` argument to skip lines at the start of the file.
 
 ```{r}
-qpcr_data <- read.csv("data/qpcr_data.csv", skip = 27)
+qpcr_data <- read.csv("data/qpcr_data.csv", skip = 27, stringsAsFactors = FALSE)
 head(qpcr_data)
 ```
+
+> ## Reading Excel files into R
+> Your qPCR data may be exported in a spreadsheet format. You can always save an 
+> Excel spreadsheet as a text file and read it in to R, but there is also a 
+> handy package for reading excel files directly: [readxl](https://readxl.tidyverse.org/).
+{: .callout}
 
 This is a simple qPCR experiment to check whether a knockdown of a target protein is effective. The samples include two different RNAi treatments and a control, as you can see in the `Sample.Name` column. However, information on what primers were used is missing from this file.
 
@@ -58,7 +67,6 @@ In order to combine the two data frames, we need to separate the "Well" informat
 {: .callout}
 
 ```{r}
-library("tidyr")
 tidy_data <- separate(qpcr_data, Well, into = c("row", "column"), 
                       sep = 1, convert = TRUE)
 head(tidy_data)
@@ -71,16 +79,43 @@ Now we have a column called "row", containing row numbers, in our data frame wit
 (Image from RStudio's [data wrangling cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf).)
 
 ```{r}
-library("dplyr")
 tidy_data <- left_join(tidy_data, primer_key, by = "row")
 ```
 
 Now we've combined the datasets. Let's make a quick plot to check that everything looks as we expect it to. We can use `geom_tile()` from the `ggplot2` package to re-create the qPCR plate layout in a plot.
 
-```{r}
-library(ggplot2)
+```{r fig.width=7, fig.height=5}
 ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
-  geom_tile() +
+  geom_tile(colour = "black") +
   geom_text()
 
 ```
+
+
+> ## Challenge
+>
+> Can you customise the plot so that the layout and axis labels better reflect a qPCR plate layout?
+>
+> Hint:
+> ~~~
+> ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
+>   geom_tile(colour = "black") +
+>   geom_text() +
+>   scale_y_discrete(limits = ...) +
+>   scale_x_continuous(breaks = ...)
+> ~~~
+> {: .language-r}
+>
+> > ## Solution
+> >
+> > ~~~
+> > ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
+> >   geom_tile(colour = "black") +
+> >   geom_text() +
+> >   scale_y_discrete(limits = c("H", "G", "F", "E", "D", "C", "B", "A")) +
+> >   scale_x_continuous(breaks = 1:12)
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+

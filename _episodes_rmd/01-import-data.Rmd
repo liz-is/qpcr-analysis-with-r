@@ -18,6 +18,8 @@ source: Rmd
 
 ```{r setup, include=FALSE}
 source("../bin/chunk-options.R")
+knitr_fig_path("01-")
+
 library("dplyr")
 library("tidyr")
 library("ggplot2")
@@ -84,7 +86,7 @@ tidy_data <- left_join(tidy_data, primer_key, by = "row")
 
 Now we've combined the datasets. Let's make a quick plot to check that everything looks as we expect it to. We can use `geom_tile()` from the `ggplot2` package to re-create the qPCR plate layout in a plot.
 
-```{r fig.width=7, fig.height=5}
+```{r}
 ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
   geom_tile(colour = "black") +
   geom_text()

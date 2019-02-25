@@ -38,7 +38,7 @@ We can use the `skip` argument to skip lines at the start of the file.
 
 
 ~~~
-qpcr_data <- read.csv("data/qpcr_data.csv", skip = 27)
+qpcr_data <- read.csv("data/qpcr_data.csv", skip = 27, stringsAsFactors = FALSE)
 head(qpcr_data)
 ~~~
 {: .language-r}
@@ -63,6 +63,12 @@ head(qpcr_data)
 ~~~
 {: .output}
 
+> ## Reading Excel files into R
+> Your qPCR data may be exported in a spreadsheet format. You can always save an 
+> Excel spreadsheet as a text file and read it in to R, but there is also a 
+> handy package for reading excel files directly: [readxl](https://readxl.tidyverse.org/).
+{: .callout}
+
 This is a simple qPCR experiment to check whether a knockdown of a target protein is effective. The samples include two different RNAi treatments and a control, as you can see in the `Sample.Name` column. However, information on what primers were used is missing from this file.
 
 In this case, we know that rows A-D were set up with primers for a housekeeping gene, and rows E-H were set up using primers for the target gene of the knockdown. We can create another data frame containing this information and combine it with the qPCR data.
@@ -85,7 +91,6 @@ In order to combine the two data frames, we need to separate the "Well" informat
 
 
 ~~~
-library("tidyr")
 tidy_data <- separate(qpcr_data, Well, into = c("row", "column"), 
                       sep = 1, convert = TRUE)
 head(tidy_data)
@@ -120,39 +125,6 @@ Now we have a column called "row", containing row numbers, in our data frame wit
 
 
 ~~~
-library("dplyr")
-~~~
-{: .language-r}
-
-
-
-~~~
-
-Attaching package: 'dplyr'
-~~~
-{: .output}
-
-
-
-~~~
-The following objects are masked from 'package:stats':
-
-    filter, lag
-~~~
-{: .output}
-
-
-
-~~~
-The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union
-~~~
-{: .output}
-
-
-
-~~~
 tidy_data <- left_join(tidy_data, primer_key, by = "row")
 ~~~
 {: .language-r}
@@ -169,11 +141,39 @@ Now we've combined the datasets. Let's make a quick plot to check that everythin
 
 
 ~~~
-library(ggplot2)
 ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
-  geom_tile() +
+  geom_tile(colour = "black") +
   geom_text()
 ~~~
 {: .language-r}
 
-<img src="../fig/rmd-unnamed-chunk-6-1.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" width="612" style="display: block; margin: auto;" />
+<img src="../fig/rmd-01-unnamed-chunk-6-1.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" width="612" style="display: block; margin: auto;" />
+
+
+> ## Challenge
+>
+> Can you customise the plot so that the layout and axis labels better reflect a qPCR plate layout?
+>
+> Hint:
+> ~~~
+> ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
+>   geom_tile(colour = "black") +
+>   geom_text() +
+>   scale_y_discrete(limits = ...) +
+>   scale_x_continuous(breaks = ...)
+> ~~~
+> {: .language-r}
+>
+> > ## Solution
+> >
+> > ~~~
+> > ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name)) +
+> >   geom_tile(colour = "black") +
+> >   geom_text() +
+> >   scale_y_discrete(limits = c("H", "G", "F", "E", "D", "C", "B", "A")) +
+> >   scale_x_continuous(breaks = 1:12)
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+

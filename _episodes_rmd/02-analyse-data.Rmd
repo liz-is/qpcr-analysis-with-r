@@ -5,18 +5,21 @@ exercises: 15
 questions:
 - "How can I analyse qPCR data in R?"
 objectives:
-- " To combine data across replicates using `group_by` and `summarise()`."
+- " To combine data across replicates using `group_by()` and `summarise()`."
 - " To create a reference data frame using `filter()."
 - " To calculate differences between reference and sample data."
 keypoints:
-- "Use the `skip` argument to skip lines when reading in a text file."
-- "Plots can be used to inspect the contents of large data frames."
-- "Data frames can be combined based on matching variables."
+- " There is a lot of data wrangling involved in data analysis!"
+- " The `group_by()` and `summarise()` functions are useful for calculating means across groups of samples."
+- " The `mutate()` function can be used to store the results of calculations in a new column."
+- " Using R for analysis helpd make the analysis reproducible."
 source: Rmd
 ---
 
 ```{r setup, include=FALSE}
 source("../bin/chunk-options.R")
+knitr_fig_path("02-")
+
 library("dplyr")
 library("tidyr")
 library("ggplot2")
@@ -68,10 +71,9 @@ summarised_data <- tidy_data %>%
   mutate(Ct = as.numeric(Ct)) %>%
   group_by(Sample.Name, primers) %>%
   summarise(mean_Ct = mean(Ct))
+
+head(summarised_data)
 ```
-
-
-
 
 
 > ## Challenge
@@ -83,7 +85,7 @@ summarised_data <- tidy_data %>%
 > > ## Solution
 > >
 > > ~~~
-> > tidy_data <- tidy_data %>%
+> > summarised_data <- summarised_data %>%
 > >   separate(Sample.Name, into = c("RNAi", "replicate"), sep = "-")
 > > ~~~
 > > {: .language-r}
@@ -91,8 +93,193 @@ summarised_data <- tidy_data %>%
 {: .challenge}
 
 
-```{r}
-tidy_data <- tidy_data %>%
+```{r, echo=FALSE}
+summarised_data <- summarised_data %>%
   separate(Sample.Name, into = c("RNAi", "replicate"), sep ="-")
 ```
 
+Let's plot the mean C(t)s for each treatment for a quick comparison. Does it look like either of the RNAi treatments was effective in this experiment?
+
+```{r}
+ggplot(summarised_data, aes(x = RNAi, y = mean_Ct, colour = primers)) +
+         geom_point()
+```
+
+One common way of analysing qPCR data is to use the "delta-delta-Ct" method. This involves calculating the difference between the Ct of the housekeeping gene and the test gene, then calculating the difference between the treated samples and the control.
+
+First, let's separate the different primer sets into different data frames, and rename the `mean_Ct` column in the reference data. 
+
+```{r}
+test_data <- summarised_data %>%
+  filter(primers == "test")
+
+ref_data <- summarised_data %>%
+  filter(primers == "HK") %>%
+  rename("ref_Ct" = "mean_Ct")
+```
+
+Now, we can use the `left_join` function again to combine the two data frames based on the sample information.
+
+> ## Challenge
+>
+> Combine the `test_data` and `ref_data` data frames to make a new data frame, 
+> based on the sample information (RNAi treatment and replicate number).
+>
+> > ## Solution
+> >
+> > ~~~
+> > combined_data <- left_join(test_data, ref_data, by = c("RNAi", "replicate"))
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+
+> ## Challenge
+>
+> Use the `mutate` function to create a new column containing the delta Ct 
+> between the housekeeping gene and our gene of interest, and plot the delta Ct 
+> for each treatment and replicate. 
+>
+> > ## Solution
+> >
+> > ~~~
+> > combined_data <- mutate(combined_data, delta_Ct = ref_Ct - mean_Ct)
+> > ggplot(combined_data, aes(x = RNAi, y = delta_Ct)) +
+> >   geom_point()
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+```{r, echo=FALSE}
+combined_data <- left_join(test_data, ref_data, by = c("RNAi", "replicate")) %>%
+  mutate(delta_Ct = ref_Ct - mean_Ct)
+
+ggplot(combined_data, aes(x = RNAi, y = delta_Ct)) +
+  geom_point()
+```
+
+
+> ## Challenge
+>
+> Calculate the mean delta Ct for each treatment.
+>
+> > ## Solution
+> >
+> > ~~~
+> > treatment_summary <- combined_data %>%
+> >   group_by(RNAi) %>%
+> >   summarise(mean_delta_Ct = mean(delta_Ct))
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+
+```{r, echo=FALSE}
+treatment_summary <- combined_data %>%
+   group_by(RNAi) %>%
+   summarise(mean_delta_Ct = mean(delta_Ct))
+```
+
+Now we can calculate the delta delta Ct of each replicate compared to the mean of the control sample.
+
+```{r}
+mean_control <- filter(treatment_summary, RNAi == "Control") %>% pull(mean_delta_Ct)
+
+combined_data <- combined_data %>% 
+  mutate(delta_delta_Ct = mean_control - delta_Ct)
+
+ggplot(combined_data, aes(x = RNAi, y = delta_delta_Ct)) +
+  geom_point()
+```
+
+If you want to calculate the relative DNA concentration, you can use the fact that the amount of cDNA theoretically doubles every cycle.
+
+> ## Challenge
+>
+> What is the relative expression of our gene of interest in the RNAi-treated 
+> samples compared to the control?
+> 
+> Use the formula: `relative_conc = 2 ^ - delta_delta_Ct`. 
+>
+> > ## Solution
+> >
+> > ~~~
+> > combined_data <- combined_data %>%
+> >   mutate(rel_conc = 2^-delta_delta_Ct)
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+> ## Primer efficiency
+> Not all primer pairs are 100% efficient! If you have experimentally calculated 
+> the efficiency for your primers, you can use the experimentally calculated 
+> value in place of the 2. Since the primers for the hosuekeeping gene and genes
+> of interest can have different efficiences, it's best to calculate the 
+> cDNA concentration in arbitrary units for each gene and sample, and then 
+> calculate the differences relative to the housekeeping gene and the control.
+{: .callout}
+
+
+```{r, echo=FALSE}
+combined_data <- combined_data %>%
+  mutate(rel_conc = 2^-delta_delta_Ct)
+```
+
+We can now plot the relative concentration. 
+
+```{r}
+ggplot(combined_data, aes(x = RNAi, y = rel_conc)) +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1.25))
+```
+
+
+> ## Challenge
+>
+> Create a new column with the mean relative concentration for each sample. Plot
+> the mean values as a bar graph, with the values for each biological replicate 
+> also plotted as points. When you have only a few replicates, it's best 
+> practice to show the individual points rather than plotting a standard error 
+> or standard deviation.
+> 
+> If you want, customise the axis labels, title, etc of your plot.
+>
+> > ## Solution
+> > ~~~
+> > combined_data <- combined_data %>%
+> >   group_by(RNAi) %>%
+> >   mutate(mean_rel_conc = mean(rel_conc))
+> > 
+> > ggplot(combined_data, aes(x = primers.x, y = mean_rel_conc, fill = RNAi, group = RNAi)) +
+> >   geom_col(position ="dodge") +
+> >   geom_point(aes(y = rel_conc), position = position_dodge(width = 0.9)) +
+> >   scale_y_continuous("Relative concentration", labels = scales::percent) +
+> >   scale_fill_manual("", values = c("Control" = "grey", "RNAi1" = "lightblue", "RNAi2" = "steelblue4")) +
+> >   scale_x_discrete("") +
+> >   ggtitle("qPCR analysis of knockdown for Test") +
+> >   theme_classic(base_size = 12)
+> > ~~~
+> > {: .language-r}
+> {: .solution}
+{: .challenge}
+
+
+```{r, echo=FALSE}
+combined_data <- combined_data %>%
+  group_by(RNAi) %>%
+  mutate(mean_rel_conc = mean(rel_conc))
+
+ggplot(combined_data, aes(x = primers.x, y = mean_rel_conc, fill = RNAi, group = RNAi)) +
+  geom_col(position ="dodge") +
+  geom_point(aes(y = rel_conc), position = position_dodge(width = 0.9)) +
+  scale_y_continuous("Relative concentration", labels = scales::percent) +
+  scale_fill_manual("", values = c("Control" = "grey", "RNAi1" = "lightblue", "RNAi2" = "steelblue4")) +
+  scale_x_discrete("") +
+  ggtitle("qPCR analysis of knockdown for Test") +
+  theme_classic(base_size = 12)
+
+```

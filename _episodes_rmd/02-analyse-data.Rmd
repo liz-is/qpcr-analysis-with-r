@@ -12,7 +12,7 @@ keypoints:
 - " There is a lot of data wrangling involved in data analysis!"
 - " The `group_by()` and `summarise()` functions are useful for calculating means across groups of samples."
 - " The `mutate()` function can be used to store the results of calculations in a new column."
-- " Using R for analysis helpd make the analysis reproducible."
+- " Using R for analysis help make the analysis reproducible."
 source: Rmd
 ---
 
@@ -43,7 +43,9 @@ ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name))
   scale_x_continuous(breaks = 1:12)
 ```
 
-We want to know whether the RNAi treatments are effective at knocking down our gene of interest. To do this, we will first calculate the average across technical replicates, then compare the C(t) of our gene of interest to a housekeeping gene, then compare the treated samples with the control.
+## Calculating average Ct values
+
+We want to know whether the RNAi treatments are effective at knocking down our gene of interest. To do this, we will first calculate the average across technical replicates, then compare the Ct of our gene of interest to a housekeeping gene, then compare the treated samples with the control.
 
 First let's remove the "NTC" (no template control) and empty wells from the dataset.
 
@@ -51,7 +53,7 @@ First let's remove the "NTC" (no template control) and empty wells from the data
 tidy_data <- filter(tidy_data, Sample.Name != "NTC", Sample.Name != "")
 ```
 
-The technical replicates have the same `Sample.Name`, so we can use the `group_by()` and `summarise()` functions from `dplyr` to calculate the mean C(t) across the technical replicates for each sample.
+The technical replicates have the same `Sample.Name`, so we can use the `group_by()` and `summarise()` functions from `dplyr` to calculate the mean Ct across the technical replicates for each sample.
 
 ```{r}
 head(tidy_data$Ct)
@@ -98,12 +100,14 @@ summarised_data <- summarised_data %>%
   separate(Sample.Name, into = c("RNAi", "replicate"), sep ="-")
 ```
 
-Let's plot the mean C(t)s for each treatment for a quick comparison. Does it look like either of the RNAi treatments was effective in this experiment?
+Let's plot the mean Cts for each treatment for a quick comparison. Does it look like either of the RNAi treatments was effective in this experiment?
 
 ```{r}
 ggplot(summarised_data, aes(x = RNAi, y = mean_Ct, colour = primers)) +
          geom_point()
 ```
+
+## Using the delta-delta-Ct method 
 
 One common way of analysing qPCR data is to use the "delta-delta-Ct" method. This involves calculating the difference between the Ct of the housekeeping gene and the test gene, then calculating the difference between the treated samples and the control.
 
@@ -195,6 +199,8 @@ ggplot(combined_data, aes(x = RNAi, y = delta_delta_Ct)) +
   geom_point()
 ```
 
+## Calculating relative DNA concentration
+
 If you want to calculate the relative DNA concentration, you can use the fact that the amount of cDNA theoretically doubles every cycle.
 
 > ## Challenge
@@ -283,3 +289,17 @@ ggplot(combined_data, aes(x = primers.x, y = mean_rel_conc, fill = RNAi, group =
   theme_classic(base_size = 12)
 
 ```
+
+## Reproducibility
+
+Biologists often have to analyse multiple similar datasets - for example, the same qPCR plate layout with different primers or different samples. Using R for analysis means that you can re-run an analysis on a new dataset much more quickly than by doing the calculations by hand each time. 
+
+Another advantage of using R for analysis is that you can use [knitr/Rmarkdown](http://swcarpentry.github.io/r-novice-gapminder/15-knitr-markdown/index.html) to generate nicely-formatted html, pdf, or docx reports from your code. These can contain plots and tables of results, as well as your interpretation of the results and any notes. 
+
+
+> ## Challenge
+>
+> Create an Rmarkdown document that contains all the code needed to read in and 
+> analyse a qPCR dataset. You should also include a short introduction to the 
+> experiment, and your interpretation of the results.
+{: .challenge}

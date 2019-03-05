@@ -7,13 +7,14 @@ exercises: 15
 questions:
 - "How can I analyse qPCR data in R?"
 objectives:
-- " To combine data across replicates using `group_by` and `summarise()`."
+- " To combine data across replicates using `group_by()` and `summarise()`."
 - " To create a reference data frame using `filter()."
 - " To calculate differences between reference and sample data."
 keypoints:
-- "Use the `skip` argument to skip lines when reading in a text file."
-- "Plots can be used to inspect the contents of large data frames."
-- "Data frames can be combined based on matching variables."
+- " There is a lot of data wrangling involved in data analysis!"
+- " The `group_by()` and `summarise()` functions are useful for calculating means across groups of samples."
+- " The `mutate()` function can be used to store the results of calculations in a new column."
+- " Using R for analysis help make the analysis reproducible."
 source: Rmd
 ---
 
@@ -33,7 +34,9 @@ ggplot(tidy_data, aes(x = column, y = row, fill = primers, label = Sample.Name))
 
 <img src="../fig/rmd-02-unnamed-chunk-1-1.png" title="plot of chunk unnamed-chunk-1" alt="plot of chunk unnamed-chunk-1" width="612" style="display: block; margin: auto;" />
 
-We want to know whether the RNAi treatments are effective at knocking down our gene of interest. To do this, we will first calculate the average across technical replicates, then compare the C(t) of our gene of interest to a housekeeping gene, then compare the treated samples with the control.
+## Calculating average Ct values
+
+We want to know whether the RNAi treatments are effective at knocking down our gene of interest. To do this, we will first calculate the average across technical replicates, then compare the Ct of our gene of interest to a housekeeping gene, then compare the treated samples with the control.
 
 First let's remove the "NTC" (no template control) and empty wells from the dataset.
 
@@ -43,7 +46,7 @@ tidy_data <- filter(tidy_data, Sample.Name != "NTC", Sample.Name != "")
 ~~~
 {: .language-r}
 
-The technical replicates have the same `Sample.Name`, so we can use the `group_by()` and `summarise()` functions from `dplyr` to calculate the mean C(t) across the technical replicates for each sample.
+The technical replicates have the same `Sample.Name`, so we can use the `group_by()` and `summarise()` functions from `dplyr` to calculate the mean Ct across the technical replicates for each sample.
 
 
 ~~~
@@ -127,16 +130,18 @@ head(summarised_data)
 
 
 
-Let's plot the mean C(t)s for each treatment for a quick comparison.
+Let's plot the mean Cts for each treatment for a quick comparison. Does it look like either of the RNAi treatments was effective in this experiment?
 
 
 ~~~
 ggplot(summarised_data, aes(x = RNAi, y = mean_Ct, colour = primers)) +
-         geom_jitter()
+         geom_point()
 ~~~
 {: .language-r}
 
 <img src="../fig/rmd-02-unnamed-chunk-6-1.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" width="612" style="display: block; margin: auto;" />
+
+## Using the delta-delta-Ct method 
 
 One common way of analysing qPCR data is to use the "delta-delta-Ct" method. This involves calculating the difference between the Ct of the housekeeping gene and the test gene, then calculating the difference between the treated samples and the control.
 
@@ -223,7 +228,10 @@ ggplot(combined_data, aes(x = RNAi, y = delta_delta_Ct)) +
 {: .language-r}
 
 <img src="../fig/rmd-02-unnamed-chunk-10-1.png" title="plot of chunk unnamed-chunk-10" alt="plot of chunk unnamed-chunk-10" width="612" style="display: block; margin: auto;" />
-If you want to calculate the relative DNA concentration, you can use the fact that the cDNA theoretically doubles every cycle.
+
+## Calculating relative DNA concentration
+
+If you want to calculate the relative DNA concentration, you can use the fact that the amount of cDNA theoretically doubles every cycle.
 
 > ## Challenge
 >
@@ -305,3 +313,17 @@ Warning: Removed 1 rows containing missing values (geom_point).
 
 
 <img src="../fig/rmd-02-unnamed-chunk-13-1.png" title="plot of chunk unnamed-chunk-13" alt="plot of chunk unnamed-chunk-13" width="612" style="display: block; margin: auto;" />
+
+## Reproducibility
+
+Biologists often have to analyse multiple similar datasets - for example, the same qPCR plate layout with different primers or different samples. Using R for analysis means that you can re-run an analysis on a new dataset much more quickly than by doing the calculations by hand each time. 
+
+Another advantage of using R for analysis is that you can use [knitr/Rmarkdown](http://swcarpentry.github.io/r-novice-gapminder/15-knitr-markdown/index.html) to generate nicely-formatted html, pdf, or docx reports from your code. These can contain plots and tables of results, as well as your interpretation of the results and any notes. 
+
+
+> ## Challenge
+>
+> Create an Rmarkdown document that contains all the code needed to read in and 
+> analyse a qPCR dataset. You should also include a short introduction to the 
+> experiment, and your interpretation of the results.
+{: .challenge}

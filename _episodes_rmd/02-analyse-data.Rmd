@@ -1,7 +1,7 @@
 ---
 title: Analysing qPCR data
 teaching: 40
-exercises: 15
+exercises: 30
 questions:
 - "How can I analyse qPCR data in R?"
 objectives:

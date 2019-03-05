@@ -1,6 +1,6 @@
 ---
 title: Importing qPCR data and experimental designs into R
-teaching: 40
+teaching: 20
 exercises: 15
 questions:
 - "How can I get my qPCR data into R?"

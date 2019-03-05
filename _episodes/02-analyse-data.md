@@ -3,7 +3,7 @@
 # Instead, please edit 02-analyse-data.md in _episodes_rmd/
 title: Analysing qPCR data
 teaching: 40
-exercises: 15
+exercises: 30
 questions:
 - "How can I analyse qPCR data in R?"
 objectives:

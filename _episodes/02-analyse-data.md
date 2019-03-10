@@ -268,16 +268,9 @@ We can now plot the relative concentration.
 ~~~
 ggplot(combined_data, aes(x = RNAi, y = rel_conc)) +
   geom_point() +
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1.25))
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1.3))
 ~~~
 {: .language-r}
-
-
-
-~~~
-Warning: Removed 1 rows containing missing values (geom_point).
-~~~
-{: .error}
 
 <img src="../fig/rmd-02-unnamed-chunk-12-1.png" title="plot of chunk unnamed-chunk-12" alt="plot of chunk unnamed-chunk-12" width="612" style="display: block; margin: auto;" />
 

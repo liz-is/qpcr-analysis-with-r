@@ -240,7 +240,7 @@ We can now plot the relative concentration.
 ```{r}
 ggplot(combined_data, aes(x = RNAi, y = rel_conc)) +
   geom_point() +
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1.25))
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1.3))
 ```
 
 
@@ -279,14 +279,15 @@ combined_data <- combined_data %>%
   group_by(RNAi) %>%
   mutate(mean_rel_conc = mean(rel_conc))
 
-ggplot(combined_data, aes(x = primers.x, y = mean_rel_conc, fill = RNAi, group = RNAi)) +
-  geom_col(position ="dodge") +
-  geom_point(aes(y = rel_conc), position = position_dodge(width = 0.9)) +
-  scale_y_continuous("Relative concentration", labels = scales::percent) +
-  scale_fill_manual("", values = c("Control" = "grey", "RNAi1" = "lightblue", "RNAi2" = "steelblue4")) +
-  scale_x_discrete("") +
-  ggtitle("qPCR analysis of knockdown for Test") +
-  theme_classic(base_size = 12)
+ggplot(combined_data, aes(x = RNAi, y = mean_rel_conc, fill = RNAi)) +
+  geom_col(position = "identity") +
+  geom_point(aes(y = rel_conc)) +
+  labs(x = "Treatment",
+       y = "Relative concentration",
+       fill = "",
+       title = "Figure 1: qPCR analysis of knockdown") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_classic()
 
 ```
 
